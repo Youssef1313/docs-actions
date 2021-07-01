@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using GitHub;
@@ -12,12 +13,26 @@ MarkdownLinksVerifierConfiguration configuration = await ConfigurationReader.Get
 
 Console.WriteLine($"Starting Markdown Links Verifier in '{Directory.GetCurrentDirectory()}'.");
 List<LinkError> result = await MarkdownFilesAnalyzer.GetResultsAsync(configuration);
-int returnCode = result.Count;
+
 
 foreach (LinkError linkError in result)
 {
     Console.WriteLine($"::error::In file '{linkError.File}': Invalid link: '{linkError.Link}' relative to '{linkError.RelativeTo}'.");
 }
+
+if (Environment.GetEnvironmentVariable("IS_TRY_FIX") == "true")
+{
+    ImmutableArray<Redirection> redirections = OpenPublishingRedirectionReader.GetRedirections();
+    await File.WriteAllTextAsync("Hello_from_actions.md", "Hello!");
+    foreach (LinkError linkError in result)
+    {
+        Redirection? redirection = redirections.SingleOrDefault(redirection => redirection.SourcePath == "");
+    }
+    return 0;
+
+}
+
+int returnCode = result.Count;
 
 // on: pull_request
 // env:

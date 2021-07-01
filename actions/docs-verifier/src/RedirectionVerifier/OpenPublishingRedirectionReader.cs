@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace RedirectionVerifier
 {
-    internal static class OpenPublishingRedirectionReader
+    public static class OpenPublishingRedirectionReader
     {
         private static readonly JsonSerializerOptions s_options = new() { AllowTrailingCommas = true };
         private static OpenPublishingRedirections s_cachedOpenPublishingRedirections = null!;
