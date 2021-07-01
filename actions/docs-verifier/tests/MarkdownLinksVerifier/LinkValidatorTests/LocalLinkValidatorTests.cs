@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using MarkdownLinksVerifier.Configuration;
@@ -8,43 +8,8 @@ namespace MarkdownLinksVerifier.UnitTests.LinkValidatorTests
 {
     public class LocalLinkValidatorTests
     {
-        private static async Task<int> WriteResultsAndGetExitCodeAsync(StringWriter writer, MarkdownLinksVerifierConfiguration? config = null)
-            => await MarkdownFilesAnalyzer.WriteResultsAsync(writer, config ?? MarkdownLinksVerifierConfiguration.Empty, $".{Path.DirectorySeparatorChar}WorkspaceTests");
-
-        private static void Verify(string[] actual, (string File, string Link, string RelativeTo)[] expected)
-        {
-            Assert.True(actual.Length > 2, $"The actual output is expected to have at least two lines. Found {actual.Length} lines:\r\n" + string.Join(Environment.NewLine, actual));
-
-            char separator = Path.DirectorySeparatorChar;
-            // The first line is always expected to be that.
-            Assert.Equal($"Starting Markdown Links Verifier in '.{separator}WorkspaceTests'.", actual[0]);
-
-            // The last line is always an empty line.
-            Assert.Equal("", actual[^1]);
-
-            for (var expectedIndex = 0; expectedIndex < expected.Length; expectedIndex++)
-            {
-                int actualIndex = expectedIndex + 1;
-                Assert.Equal(
-                    $"::error::In file '{expected[expectedIndex].File}': Invalid link: '{expected[expectedIndex].Link}' relative to '{expected[expectedIndex].RelativeTo}'.",
-                    actual[actualIndex]);
-            }
-
-            Assert.True(actual.Length == expected.Length + 2, $"Expected length doesn't match actual. Expected: {expected.Length + 2}, Actual: {actual.Length}.");
-        }
-
-        private static void VerifyNoErrors(string[] actual)
-        {
-            Assert.True(actual.Length == 2, $"The actual output is expected to have exactly two lines.  Found {actual.Length} lines:\r\n" + string.Join(Environment.NewLine, actual));
-
-            char separator = Path.DirectorySeparatorChar;
-            // The first line is always expected to be that.
-            Assert.Equal($"Starting Markdown Links Verifier in '.{separator}WorkspaceTests'.", actual[0]);
-
-            // The last line is always an empty line.
-            Assert.Equal("", actual[1]);
-
-        }
+        private static async Task<List<LinkError>> GetResultsAsync(MarkdownLinksVerifierConfiguration? config = null)
+            => await MarkdownFilesAnalyzer.GetResultsAsync(config ?? MarkdownLinksVerifierConfiguration.Empty, $".{Path.DirectorySeparatorChar}WorkspaceTests");
 
         [Fact]
         public async Task TestSimpleCase_FileDoesNotExist()
@@ -60,15 +25,13 @@ namespace MarkdownLinksVerifier.UnitTests.LinkValidatorTests
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            (string File, string Link, string RelativeTo)[] expected = new[]
+            List<LinkError> result = await GetResultsAsync();
+            var expected = new LinkError[]
             {
-                ($".{separator}WorkspaceTests{separator}README.md", "README-2.md", $".{separator}WorkspaceTests")
+                new($".{separator}WorkspaceTests{separator}README.md", "README-2.md", $".{separator}WorkspaceTests")
             };
 
-            Verify(writer.ToString().Split(writer.NewLine), expected);
-            Assert.Equal(expected: 1, actual: returnCode);
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -86,10 +49,8 @@ namespace MarkdownLinksVerifier.UnitTests.LinkValidatorTests
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -107,10 +68,8 @@ namespace MarkdownLinksVerifier.UnitTests.LinkValidatorTests
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -132,10 +91,8 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -153,15 +110,13 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            (string File, string Link, string RelativeTo)[] expected = new[]
+            List<LinkError> result = await GetResultsAsync();
+            var expected = new LinkError[]
             {
-                ($".{separator}WorkspaceTests{separator}README.md", "README2.md#Hello", $".{separator}WorkspaceTests")
+                new($".{separator}WorkspaceTests{separator}README.md", "README2.md#Hello", $".{separator}WorkspaceTests")
             };
 
-            Verify(writer.ToString().Split(writer.NewLine), expected);
-            Assert.Equal(expected: 1, actual: returnCode);
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -183,14 +138,12 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            (string File, string Link, string RelativeTo)[] expected = new[]
+            List<LinkError> result = await GetResultsAsync();
+            var expected = new LinkError[]
             {
-                ($".{separator}WorkspaceTests{separator}README.md", "#Heading1", $".{separator}WorkspaceTests")
+                new($".{separator}WorkspaceTests{separator}README.md", "#Heading1", $".{separator}WorkspaceTests")
             };
-            Verify(writer.ToString().Split(writer.NewLine), expected);
-            Assert.Equal(expected: 1, actual: returnCode);
+            Assert.Equal(expected, result);
         }
 
         [Fact]
@@ -208,11 +161,8 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -234,10 +184,8 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -259,10 +207,8 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -293,10 +239,8 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact]
@@ -318,14 +262,12 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            (string File, string Link, string RelativeTo)[] expected = new[]
-{
-                ($".{separator}WorkspaceTests{separator}README.md", "#my_anchor", $".{separator}WorkspaceTests")
+            List<LinkError> result = await GetResultsAsync();
+            var expected = new LinkError[]
+            {
+                new($".{separator}WorkspaceTests{separator}README.md", "#my_anchor", $".{separator}WorkspaceTests")
             };
-            Verify(writer.ToString().Split(writer.NewLine), expected);
-            Assert.Equal(expected: 1, actual: returnCode);
+            Assert.Equal(expected, result);
         }
 
         #region "MSDocs-specific"
@@ -347,10 +289,8 @@ Hello world.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
 
         [Fact(Skip = "https://github.com/Youssef1313/markdown-links-verifier/issues/93")]
@@ -378,10 +318,8 @@ Obsolete members and compatibility switches in ASP.NET Core 2.2 were removed.
             char separator = Path.DirectorySeparatorChar;
 
             string workspacePath = await workspace.InitializeAsync();
-            using var writer = new StringWriter();
-            int returnCode = await WriteResultsAndGetExitCodeAsync(writer);
-            VerifyNoErrors(writer.ToString().Split(writer.NewLine));
-            Assert.Equal(expected: 0, actual: returnCode);
+            List<LinkError> result = await GetResultsAsync();
+            Assert.Empty(result);
         }
         #endregion
     }

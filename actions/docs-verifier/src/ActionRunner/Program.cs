@@ -9,7 +9,15 @@ using Octokit;
 using RedirectionVerifier;
 
 MarkdownLinksVerifierConfiguration configuration = await ConfigurationReader.GetConfigurationAsync();
-var returnCode = await MarkdownFilesAnalyzer.WriteResultsAsync(Console.Out, configuration);
+
+Console.WriteLine($"Starting Markdown Links Verifier in '{Directory.GetCurrentDirectory()}'.");
+List<LinkError> result = await MarkdownFilesAnalyzer.GetResultsAsync(configuration);
+int returnCode = result.Count;
+
+foreach (LinkError linkError in result)
+{
+    Console.WriteLine($"::error::In file '{linkError.File}': Invalid link: '{linkError.Link}' relative to '{linkError.RelativeTo}'.");
+}
 
 // on: pull_request
 // env:
