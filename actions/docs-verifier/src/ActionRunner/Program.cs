@@ -9,8 +9,11 @@ using Microsoft.Extensions.FileSystemGlobbing;
 using Octokit;
 using RedirectionVerifier;
 
-MarkdownLinksVerifierConfiguration configuration = await ConfigurationReader.GetConfigurationAsync();
+/*MarkdownLinksVerifierConfiguration configuration = await ConfigurationReader.GetConfigurationAsync();
 int returnCode = await MarkdownFilesAnalyzer.WriteResultsAsync(Console.Out, configuration);
+*/
+
+var returnCode = 0;
 
 // on: pull_request
 // env:
@@ -48,6 +51,7 @@ return returnCode;
 
 static bool IsRedirectableFile(PullRequestFile file)
 {
+    Console.WriteLine($"Checking '{file.PreviousFileName}' - '{file.FileName}'.");
     string? deletedFileName = file.IsRenamed()
         ? file.PreviousFileName
         : (file.IsRemoved() ? file.FileName : null);
