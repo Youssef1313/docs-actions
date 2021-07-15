@@ -42,7 +42,7 @@ namespace RedirectionVerifier
                         foreach (string includePattern in content.Files)
                         {
                             Console.WriteLine("Adding include: " + includePattern);
-                            matcher.AddInclude(includePattern);
+                            matcher.AddInclude($"{content.Source}/{includePattern}");
                         }
                     }
                     else
