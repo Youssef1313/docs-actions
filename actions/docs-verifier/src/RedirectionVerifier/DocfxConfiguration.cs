@@ -35,16 +35,19 @@ namespace RedirectionVerifier
                 IEnumerable<DocfxContent> contents = GetDocfxContents();
                 foreach (DocfxContent content in contents)
                 {
+                    Console.WriteLine("Creating matcher:");
                     var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
                     if (content.Files is not null)
                     {
                         foreach (string includePattern in content.Files)
                         {
+                            Console.WriteLine("Adding include: " + includePattern);
                             matcher.AddInclude(includePattern);
                         }
                     }
                     else
                     {
+                        Console.WriteLine("No \"Files\", include all.");
                         matcher.AddInclude("**");
                     }
 
@@ -52,6 +55,7 @@ namespace RedirectionVerifier
                     {
                         foreach (string excludePattern in content.Excludes)
                         {
+                            Console.WriteLine("Adding exclude: " + excludePattern);
                             matcher.AddExclude(excludePattern);
                         }
                     }
